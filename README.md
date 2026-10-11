@@ -4,7 +4,7 @@ A browser game that turns campus placement season into a decision game, plus thr
 
 You pick a company drive, choose a career track, build a skill stack, plan prep activities, lay out your resume, take mentor advice, choose an application strategy and face a recruiter panel. Hidden scoring (Skills, Projects, Resume, Communication) produces a grade, recruiter feedback and a personal 4-week prep roadmap.
 
-Built on top of *The Hackathon Simulator* (see [NOTICE.md](NOTICE.md)).
+
 
 ## Run it
 
