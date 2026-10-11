@@ -639,17 +639,14 @@ Please make sure `npm test` and `npx tsc --noEmit` pass, and add types in `types
 
 ---
 
-## Project Activity
+## Recruiter Weights Graphs
 
-A live contribution graph for the repository owner, drawn from GitHub activity. It fills in as you commit.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/recruiter-weights-dark.png">
+  <img alt="Recruiter weights" src="docs/recruiter-weights-light.png">
+</picture>
 
-<a href="https://github.com/Quantumboy80/placement-season-simulator/graphs/commit-activity">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://github-readme-activity-graph.vercel.app/graph?username=Quantumboy80&theme=github-dark&hide_border=true&area=true" />
-   <source media="(prefers-color-scheme: light)" srcset="https://github-readme-activity-graph.vercel.app/graph?username=Quantumboy80&theme=github-compact&hide_border=true&area=true" />
-   <img alt="Contribution Activity Graph" src="https://github-readme-activity-graph.vercel.app/graph?username=Quantumboy80&theme=github-compact&hide_border=true&area=true" />
- </picture>
-</a>
+
 
 ### Contributors
 
@@ -669,7 +666,7 @@ Optional: a graph scoped to this one repository (commits, issues, pull requests,
 
 ## License
 
-This project is built on The Hackathon Simulator. See [NOTICE.md](NOTICE.md) for attribution and licensing details, and add a `LICENSE` file before publishing.
+MIT. Feel free to learn from it, fork it, and build on it.
 
 ---
 
