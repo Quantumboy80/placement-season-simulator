@@ -1,0 +1,608 @@
+/**
+ * @file Core type definitions for The Hackathon Simulator
+ * @description Defines all TypeScript interfaces and types used throughout the game,
+ * including game phases, entities (problems, judges, tech items, features),
+ * scoring structures, events, and the central game state.
+ */
+
+// ─── Game Phases ────────────────────────────────────────────────────────────────
+
+/** All possible phases of the hackathon simulation */
+export type GamePhase =
+  | 'LOBBY'
+  | 'PROBLEM_REVEAL'
+  | 'TECH_STACK'
+  | 'FEATURE_PRIORITY'
+  | 'BUILDING'
+  | 'JUDGING'
+  | 'RESULTS';
+
+/** All possible stages of the hackathon simulation conditional engine */
+export type GameStage =
+  | 'difficulty'
+  | 'teamFormation'
+  | 'problemReveal'
+  | 'solutionDirection'
+  | 'techStack'
+  | 'usp'
+  | 'features'
+  | 'pitchDeck'
+  | 'mentor'
+  | 'businessModel'
+  | 'pitchPrep'
+  | 'judgeSpin'
+  | 'judging'
+  | 'results';
+
+// ─── Core Entities ──────────────────────────────────────────────────────────────
+
+/** A company hiring drive the candidate prepares for (kept as `Problem` so existing store/UI code keeps working) */
+export interface Problem {
+  /** Unique identifier for the problem */
+  id: string;
+  /** Short title of the problem */
+  title: string;
+  /** Detailed description of the challenge */
+  description: string;
+  /** Domain category the problem belongs to */
+  category: 'it-services' | 'product' | 'startup' | 'core-engg' | 'data-ai' | 'govt-psu' | 'bfsi-consulting';
+  /** Difficulty tier affecting scoring and complexity */
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  /** Hard constraints the solution must respect */
+  constraints: string[];
+  /** Optional stretch goals for bonus points */
+  bonusObjectives: string[];
+  /** Clue or target emphasis when pitching to judges */
+  judgingHint?: string;
+}
+
+/** A hackathon judge who evaluates the final project */
+export interface Judge {
+  /** Unique identifier for the judge */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Emoji avatar for the judge */
+  avatar: string;
+  /** Path to the judge's portrait image (in /public/avatars/) */
+  avatarImage?: string;
+  /** Professional title */
+  title: string;
+  /** Areas of expertise */
+  expertise: string[];
+  /** Personality archetype that influences feedback tone */
+  personality: 'tough' | 'encouraging' | 'technical' | 'creative';
+  /** How this judge weights each scoring category (should sum to ~1.0) */
+  scoringWeights: {
+    innovation: number;
+    execution: number;
+    design: number;
+    pitch: number;
+  };
+}
+
+/** A hint from a mentor that can help the player during a specific phase */
+export interface MentorHint {
+  /** Unique identifier for the hint */
+  id: string;
+  /** Which game phase this hint is relevant to */
+  phase: GamePhase;
+  /** The hint message displayed to the player */
+  message: string;
+  /** How useful this hint is (affects scoring/strategy) */
+  helpfulness: 'low' | 'medium' | 'high';
+  /** What aspect of the hackathon this hint addresses */
+  category: 'technical' | 'design' | 'strategy' | 'motivation';
+}
+
+/** A technology that can be added to the project's tech stack */
+export interface TechItem {
+  /** Unique identifier for the tech */
+  id: string;
+  /** Display name (e.g. "React", "PostgreSQL") */
+  name: string;
+  /** Lucide icon name for visual representation */
+  icon: string;
+  /** Technology layer/category */
+  category: string;
+  /** Complexity rating from 1 (easy) to 5 (expert) */
+  difficulty: number;
+  /** IDs of other TechItems that create positive synergy when combined */
+  synergies: string[];
+}
+
+/** A product feature that can be built during the hackathon */
+export interface Feature {
+  /** Unique identifier for the feature */
+  id: string;
+  /** Short name of the feature */
+  name: string;
+  /** What this feature does */
+  description: string;
+  /** How much time/energy this feature takes to build */
+  effort: 'low' | 'medium' | 'high';
+  /** How much value this feature adds to the project */
+  impact: 'low' | 'medium' | 'high';
+  /** IDs of TechItems required to build this feature */
+  requiredTech?: string[];
+}
+
+/** A business model procedurally generated for the project */
+export interface GeneratedBusinessModel {
+  id: string;
+  name: string;
+  desc: string;
+  customer: string;
+  valueProp: string;
+  monetization: string;
+  riskLevel: 'Low' | 'Medium' | 'High';
+  pricingStructure: string;
+  customerSegment: string;
+  revenueStream: string;
+  growthStrategy: string;
+  potentialStrengths: string;
+  potentialRisks: string;
+}
+
+export interface JudgeDecisionMemory {
+  chosenUsp: string | null;
+  selectedTechIds: string[];
+  mentorDecisions: Record<string, 'applied' | 'rejected' | 'pending'>;
+  backlogFeatureIds: string[];
+  businessModelChoice: string | null;
+  pitchStructureSlides: string[];
+}
+
+/** A strategic advice card generated by the advisor */
+export interface AdvisorAdvice {
+  id: string;
+  title: string;
+  explanation: string;
+  expectedImpact: string;
+  tradeoffs: string;
+  status: 'pending' | 'applied' | 'rejected';
+  scoreModifiers: {
+    innovation?: number;
+    execution?: number;
+    design?: number;
+    pitch?: number;
+    bonus?: number;
+  };
+  mentorPersona?: {
+    name: string;
+    role: 'Placed Senior' | 'Startup Founder' | 'Senior Engineer' | 'Hiring Manager' | 'Interview Coach';
+    avatar: string;
+    tone: string;
+  };
+  action?: {
+    type: 'replace_tech' | 'remove_feature' | 'move_slide' | 'change_biz_model' | 'reduce_scope' | 'focus_segment' | 'custom';
+    payload?: any;
+  };
+}
+
+// ─── Scoring ────────────────────────────────────────────────────────────────────
+
+/** Breakdown of scores across all judging categories */
+export interface ScoreBreakdown {
+  /** How novel and creative the solution is (0-100) */
+  innovation: number;
+  /** Quality of implementation and completeness (0-100) */
+  execution: number;
+  /** UI/UX quality and visual polish (0-100) */
+  design: number;
+  /** Quality of the demo presentation (0-100) */
+  pitch: number;
+  /** Extra points from bonus objectives and synergies */
+  bonus: number;
+  /** Aggregate total score */
+  total: number;
+}
+
+/** Feedback from a single judge after evaluation */
+export interface JudgeFeedback {
+  /** ID of the judge providing feedback */
+  judgeId: string;
+  /** Numeric score from this judge */
+  score: number;
+  /** Written feedback comment */
+  comment: string;
+  /** One standout positive aspect the judge noticed */
+  highlight: string;
+}
+
+// ─── Events ─────────────────────────────────────────────────────────────────────
+
+/** A random event that occurs during the hackathon */
+export interface GameEvent {
+  /** Unique identifier for the event */
+  id: string;
+  /** Whether this event helps, hurts, or is neutral */
+  type: 'positive' | 'negative' | 'neutral';
+  /** Short event headline */
+  title: string;
+  /** Narrative description of what happened */
+  description: string;
+  /** Mechanical effect on the game state */
+  effect: string;
+}
+
+// ─── Game State & Actions ───────────────────────────────────────────────────────
+
+/** The complete state of a hackathon simulation run */
+export interface GameState {
+  /** Current stage of the game */
+  stage: GameStage;
+  /** Current phase of the game (legacy, kept for compatibility) */
+  phase: GamePhase;
+  /** Selected game difficulty */
+  difficulty: 'easy' | 'medium' | 'hard' | 'dev' | null;
+  /** The problem the player chose to solve, or null if not yet selected */
+  selectedProblem: Problem | null;
+  /** Solution direction chosen for the project */
+  solutionDirection: string | null;
+  /** Technologies chosen for the project */
+  techStack: TechItem[];
+  /** Unique Selling Proposition selected */
+  usp: string | null;
+  /** Features selected and prioritized for building */
+  features: Feature[];
+  /** Chosen mentor name */
+  mentorName: string | null;
+  /** Chosen business model */
+  businessModel: string | null;
+  /** Written elevator pitch text */
+  pitchText: string;
+  
+  /** Seconds remaining in the current timed phase (legacy) */
+  timeRemaining: number;
+  /** Total seconds allocated for the current timed phase (legacy) */
+  totalTime: number;
+
+  /** Seconds remaining on the global game clock */
+  globalTimeRemaining: number;
+  /** Total seconds allocated for the game based on difficulty */
+  globalTotalTime: number;
+  /** Whether the global timer is currently paused */
+  isTimerPaused: boolean;
+
+  /** Current score breakdown */
+  score: ScoreBreakdown;
+  
+  /** The judge currently evaluating, or null */
+  currentJudge: Judge | null;
+  /** Accumulated feedback from all judges */
+  judgeFeedback: JudgeFeedback[];
+  /** Current state of the judge spin wheel */
+  judgeSpinState: 'idle' | 'spinning' | 'done';
+
+  /** Number of mentor hints the player has consumed */
+  mentorHintsUsed: number;
+  /** Random events that have occurred this run */
+  events: GameEvent[];
+  /** Whether the game has been started */
+  isGameStarted: boolean;
+  /** Whether the game has ended */
+  isGameOver: boolean;
+  /** Whether the player has ever reached the Results screen during this run */
+  hasFinishedOnce: boolean;
+  /** Persisted list of achievements unlocked */
+  unlockedAchievements: string[];
+  /** Whether game sound is currently enabled */
+  soundEnabled: boolean;
+  /** Currently active chaos event overlay, or null */
+  activeChaosEvent: ChaosEvent | null;
+  /** History list of event IDs triggered this run */
+  chaosHistory: string[];
+  /** Active game mode */
+  gameMode: 'classic' | 'daily' | 'speedrun' | 'chaos' | 'hardcore';
+  /** List of active special modifiers in this run */
+  activeModifiers: string[];
+  /** The daily modifier active today, or null */
+  dailyModifier: string | null;
+  /** Persisted stats for all historical runs */
+  stats: GameStats;
+  
+  // Update v1.5: Pitch Deck Builder variables
+  /** Selected slides in the pitch deck */
+  pitchDeck: string[];
+  /** Numeric score calculated for the deck layout */
+  pitchDeckScore: number;
+  /** Narrative category based on deck layout */
+  deckNarrativeQuality: string;
+  /** Computed slide deck archetype */
+  deckArchetype: string;
+
+  // Update v1.6: AI Generated Project Design System variables
+  /** Primary unique selling proposition chosen */
+  primaryUsp: string | null;
+  /** Secondary unique selling proposition chosen */
+  secondaryUsp: string | null;
+  /** AI generated USP options */
+  generatedUSPs: any[];
+  /** AI generated features backlog */
+  generatedBacklog: any[];
+
+  // Update v1.7: AI Co-Founder System variables
+  /** AI generated Business Model options */
+  generatedBusinessModels: GeneratedBusinessModel[];
+  /** AI generated Advisor recommendations */
+  generatedAdvisorAdvice: AdvisorAdvice[];
+  /** Dynamic mentor confidence score (0-100) */
+  mentorConfidence: number;
+  
+  // Update v1.8: Hidden Scoring + Project Health Dashboard variables
+  /** Persistent decision tracking logs for the Judge Memory System */
+  judgeDecisionMemory: JudgeDecisionMemory | null;
+  /** The dynamic roast text compiled for the Results screen */
+  roastText: string;
+
+  // Update v2.0: Team System variables
+  playerName: string;
+  playerAvatar: string;
+  team: Teammate[];
+  activeTeamChatMoment: TeamChatMoment | null;
+  teamChatHistory: string[];
+  activeTeammateAdvice: Record<string, any>;
+  teamAdviceHistory: { teammateId: string; adviceId: string; title: string; stage: string; status: 'applied' | 'rejected'; modifiers?: Record<string, number>; }[];
+  teamContributionLogs: string[];
+  teamChatMessages: TeamChatMessage[];
+  unreadChatCount: number;
+  teamTimeline: { time: string; event: string; }[];
+  triggeredThresholds: string[];
+  teammateDecisions: TeammateDecision[];
+  lastContextState: Record<string, string>;
+  isBackendLocked: boolean;
+  hasCrewVotedThisStage: Record<string, boolean>;
+  activeTechTab: string;
+}
+
+export interface TeammateDecision {
+  teammateName: string;
+  recommendation: string;
+  status: 'accepted' | 'rejected';
+  resultingChanges: string;
+}
+
+/** Actions the player (or system) can dispatch to mutate game state */
+export interface GameActions {
+  /** Begin a new hackathon run */
+  startGame: () => void;
+  /** Set chosen difficulty and initialize timer */
+  setDifficulty: (difficulty: 'easy' | 'medium' | 'hard' | 'dev') => void;
+  /** Change the active game mode */
+  setGameMode: (mode: 'classic' | 'daily' | 'speedrun' | 'chaos' | 'hardcore') => void;
+  /** Seed and initialize the Daily Challenge state */
+  initializeDailyChallenge: () => void;
+  /** Record results and update local stats at end of run */
+  updateStats: (finalScore: number) => void;
+  
+  /** Advance to the next game stage */
+  nextStage: () => void;
+  /** Advance to the next game phase (legacy) */
+  nextPhase: () => void;
+  /** Retreat to the previous game stage */
+  previousStage: () => void;
+  /** Jump directly to a specific game stage */
+  jumpToStage: (stage: GameStage) => void;
+
+  /** Choose a problem to solve */
+  selectProblem: (problem: Problem) => void;
+  /** Choose a solution direction */
+  setSolutionDirection: (direction: string) => void;
+  /** Add a technology to the tech stack */
+  addTechItem: (item: TechItem) => void;
+  /** Remove a technology from the tech stack by ID */
+  removeTechItem: (itemId: string) => void;
+  /** Set unique selling proposition */
+  setUsp: (usp: string | null) => void;
+  /** Set primary unique selling proposition */
+  setPrimaryUsp: (usp: string | null) => void;
+  /** Set secondary unique selling proposition */
+  setSecondaryUsp: (usp: string | null) => void;
+  /** Reorder the feature priority list */
+  reorderFeatures: (features: Feature[]) => void;
+  /** Choose a mentor */
+  setMentorName: (name: string) => void;
+  /** Choose a business model */
+  setBusinessModel: (model: string) => void;
+  /** Set pitch deck text */
+  setPitchText: (text: string) => void;
+  /** Set pitch deck slides */
+  setPitchDeck: (slides: string[]) => void;
+  /** Set generated USP options */
+  setGeneratedUSPs: (usps: any[]) => void;
+  /** Set generated features backlog */
+  setGeneratedBacklog: (backlog: any[]) => void;
+  /** Set generated Business Model options */
+  setGeneratedBusinessModels: (models: GeneratedBusinessModel[]) => void;
+  /** Set generated Advisor recommendations */
+  setGeneratedAdvisorAdvice: (advice: AdvisorAdvice[]) => void;
+  /** Set compiled roast text */
+  setRoastText: (text: string) => void;
+  /** Set the active tech tab during selection */
+  setActiveTechTab: (tab: string) => void;
+  /** Apply advisor advice */
+  applyAdvisorAdvice: (adviceId: string) => void;
+  /** Reject advisor advice */
+  rejectAdvisorAdvice: (adviceId: string) => void;
+
+  /** Decrement the global timer by one second */
+  tickTimer: () => void;
+  /** Pause the global timer */
+  pauseTimer: () => void;
+  /** Resume the global timer */
+  resumeTimer: () => void;
+  /** Manually set the remaining global time */
+  setTimeRemaining: (time: number) => void;
+
+  /** Update score categories */
+  updateScore: (category: keyof Omit<ScoreBreakdown, 'total'>, value: number) => void;
+  
+  /** Set evaluation state */
+  setCurrentJudge: (judge: Judge | null) => void;
+  /** Add feedback from a judge */
+  addJudgeFeedback: (feedback: JudgeFeedback) => void;
+  /** Set judge spin state */
+  setJudgeSpinState: (state: 'idle' | 'spinning' | 'done') => void;
+
+  /** End the current game */
+  endGame: () => void;
+  /** Reset all state for a fresh run */
+  resetGame: () => void;
+  /** Unlock a persistent milestone achievement */
+  unlockAchievement: (id: string) => void;
+  /** Toggle the global sound status */
+  toggleSound: () => void;
+  /** Resolve the active chaos event with selected choice */
+  resolveChaosEvent: (choiceIndex: number) => void;
+
+  // Update v2.0: Team System actions
+  setupTeam: (playerName: string, playerAvatar: string, teammates: Teammate[]) => void;
+  useTeammateHelp: (teammateId: string, currentStage: string) => void;
+  applyTeammateAdvice: (teammateId: string) => void;
+  rejectTeammateAdvice: (teammateId: string) => void;
+  resolveTeamChatMoment: (choiceIndex: number) => void;
+  resolveTeamChatMessageChoice: (messageId: string, choiceIndex: number) => void;
+  clearUnreadChatCount: () => void;
+  triggerTeamChatMessage: (event: string, payload?: any) => void;
+  updateTeammateContext: () => void;
+  triggerCrewVote: (voteType: 'usp' | 'businessModel', targetId?: string, voteAs?: 'primary' | 'secondary') => void;
+}
+
+export interface TeamChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  text: string;
+  timestamp: string;
+  isRead: boolean;
+  type?: 'info' | 'suggestion' | 'warning' | 'disagreement' | 'contribution' | 'action_completed' | 'waiting' | 'poll';
+  adviceDetails?: {
+    title: string;
+    observation: string;
+    concern: string;
+    recommendation: string;
+    expectedImpact: string;
+    tradeoffs?: string;
+  };
+  pollDetails?: {
+    subjectTitle: string;
+    subjectDesc: string;
+    voteAs?: 'primary' | 'secondary';
+    yesCount: number;
+    noCount: number;
+    consensusPct: number;
+    approved: boolean;
+    votesList: {
+      name: string;
+      role: string;
+      avatar: string;
+      vote: string;
+      rationale: string;
+    }[];
+  };
+  changeSummary?: {
+    before: string;
+    after: string;
+    reason?: string;
+    senderName?: string;
+  };
+  discussion?: {
+    resolved: boolean;
+    choices: {
+      label: string;
+      description: string;
+      outcomeText: string;
+      modifiers: {
+        innovation?: number;
+        execution?: number;
+        design?: number;
+        pitch?: number;
+        bonus?: number;
+      };
+      action?: {
+        type: string;
+        payload?: any;
+      };
+    }[];
+    chosenIndex?: number;
+  };
+}
+
+// ─── Teammate & Team Chat Moments ──────────────────────────────────────────
+
+export interface Teammate {
+  id: string;
+  name: string;
+  avatar: string; // emoji character
+  gender: 'male' | 'female' | 'nonbinary';
+  role: string | null;
+  personality: 'Builder' | 'Perfectionist' | 'Dreamer' | 'Founder' | 'Designer';
+  helpTokenUsed: boolean;
+  contribution: {
+    innovation: number;
+    execution: number;
+    design: number;
+    pitch: number;
+  };
+}
+
+export interface TeamChatMomentChoice {
+  label: string;
+  description: string;
+  outcomeText: string;
+  modifiers: {
+    innovation?: number;
+    execution?: number;
+    design?: number;
+    pitch?: number;
+    bonus?: number;
+  };
+}
+
+export interface TeamChatMoment {
+  id: string;
+  title: string;
+  teammateA: { name: string; avatar: string; statement: string; };
+  teammateB: { name: string; avatar: string; statement: string; };
+  choices: TeamChatMomentChoice[];
+}
+
+// ─── Chaos Events Update v1.1 ───────────────────────────────────────────
+
+export interface ChaosEventChoice {
+  label: string;
+  description: string;
+  effectText: string;
+  modifiers: {
+    innovation?: number;
+    execution?: number;
+    design?: number;
+    pitch?: number;
+    bonus?: number;
+    timeOffset?: number; // adjusts global time remaining
+  };
+}
+
+export interface ChaosEvent {
+  id: string;
+  title: string;
+  description: string;
+  category: 'technical' | 'team' | 'lucky' | 'judge';
+  weight: number; // for weighted random selections
+  choices: ChaosEventChoice[];
+}
+
+export interface GameStats {
+  totalRuns: number;
+  bestScore: number;
+  averageScore: number;
+  favoriteStack: string[];
+  chaosSurvivalRate: number; // percentage
+  judgeWinRate: number; // percentage
+  chaosRunsFaced: number;
+  chaosRunsSurvived: number;
+  judgeWins: number;
+  techUsage: Record<string, number>;
+}
